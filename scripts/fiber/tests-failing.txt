@@ -164,3 +164,6 @@ src/renderers/dom/shared/__tests__/ReactRenderDocument-test.js
 * should give helpful errors on state desync
 * should throw on full document render w/ no markup
 * supports findDOMNode on full-page components
+
+src/renderers/dom/shared/__tests__/ReactServerRendering-test.js
+* should trigger onChange when input changed before react client render

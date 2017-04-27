@@ -533,4 +533,69 @@ describe('ReactDOMServer', () => {
       );
     }).toThrowError(/Cannot assign to read only property.*/);
   });
+
+  it('should trigger onChange when input changed before react client render', () => {
+    // This test is testing client-side behavior.
+    ExecutionEnvironment.canUseDOM = true;
+
+    let changedTriggered = false;
+    let valueSynced;
+
+    class TestComponent extends React.Component {
+      constructor(props) {
+        super(props);
+
+        this.state = {
+          value: props.value || '',
+        };
+      }
+
+      componentDidMount() {
+        // This is where handleChange should be called (or right before)
+        // https://github.com/facebook/react/issues/4999#issuecomment-144557619
+        if (this.input && (this.input.value === '' || this.input.value)) {
+          valueSynced = this.state.value === this.input.value;
+        }
+      }
+
+      handleChange(event) {
+        changedTriggered = true;
+        event.preventDefault();
+
+        this.setState(() => {
+          return {
+            value: event.target.value,
+          };
+        });
+      }
+
+      render() {
+        return (
+          <input
+            ref={input => {
+              this.input = input;
+            }}
+            onChange={this.handleChange}
+            value={this.state.value}
+          />
+        );
+      }
+    }
+
+    const element = document.createElement('div');
+
+    ExecutionEnvironment.canUseDOM = false;
+    const lastMarkup = ReactDOMServer.renderToString(<TestComponent />)
+      // simulate user value change that react is unaware of
+      .replace(/value=""/g, 'value="new value"');
+
+    ExecutionEnvironment.canUseDOM = true;
+    element.innerHTML = lastMarkup;
+
+    const instance = ReactDOM.render(<TestComponent />, element);
+
+    expect(instance.input.value).toEqual(instance.state.value);
+    expect(changedTriggered).toEqual(true);
+    expect(valueSynced).toEqual(true);
+  });
 });
